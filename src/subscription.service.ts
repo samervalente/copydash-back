@@ -4,7 +4,7 @@ import {
   SubscriptionBillingFrequencyEnum,
   SubscriptionBillingStatusEnum,
 } from './subscription.types';
-import { years } from './utils/years';
+import { months } from './utils/constants';
 
 @Injectable()
 export class SubscriptionService {
@@ -49,7 +49,7 @@ export class SubscriptionService {
 
     const toDomaiMRR = Object.keys(monthlyRevenue).map((key) => {
       return {
-        month: years[Number(key) - 1],
+        month: months[Number(key) - 1],
         revenue: Number(monthlyRevenue[Number(key)].toFixed(2)),
       };
     });
