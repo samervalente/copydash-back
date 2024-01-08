@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import * as csv from 'csv-parser';
 import * as fs from 'fs';
+import { SubscriptionBilling } from 'src/subscription.types';
 import { mapRowToDomain } from 'src/utils/file-row-utils';
 import * as xlsx from 'xlsx';
 
 @Injectable()
 export class FileService {
-  async readFile(file: Express.Multer.File) {
+  async readFile(file: Express.Multer.File): Promise<SubscriptionBilling[]> {
     const filePath = `/tmp/${file.originalname}`;
 
     try {
@@ -24,7 +25,7 @@ export class FileService {
     }
   }
 
-  async readCSV(filePath: string) {
+  async readCSV(filePath: string): Promise<SubscriptionBilling[]> {
     const results = [];
     return new Promise((resolve, reject) => {
       fs.createReadStream(filePath)
@@ -39,11 +40,11 @@ export class FileService {
     });
   }
 
-  async readXLSX(filePath: string) {
+  async readXLSX(filePath: string): Promise<SubscriptionBilling[]> {
     const workbook = xlsx.readFile(filePath);
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
-    const rows = xlsx.utils.sheet_to_json(sheet);
+    const rows = xlsx.utils.sheet_to_json(sheet, { raw: false });
     const results = rows.map((data) => mapRowToDomain(data));
 
     return results;
