@@ -4,49 +4,56 @@ import {
   SubscriptionBillingFrequencyEnum,
   SubscriptionBillingStatusEnum,
 } from './subscription.types';
-import dateFns from 'date-fns';
+import { years } from './utils/years';
 
 @Injectable()
 export class SubscriptionService {
   calculateMRR(data: SubscriptionBilling[], billingYear = '2022') {
     const monthlyRevenue = {};
     data.forEach((subscriptionBilling: SubscriptionBilling) => {
-      const { start_date, next_cycle, value } = subscriptionBilling;
+      const {
+        start_date,
+        next_cycle,
+        value: billingValue,
+        status,
+        frequency,
+      } = subscriptionBilling;
       const startDate = new Date(start_date);
-      const month = startDate.getMonth();
+      const month = startDate.getMonth() + 1;
+      const next_cycle_month = new Date(next_cycle).getMonth() + 1;
 
-      if (
-        subscriptionBilling.status !==
-        SubscriptionBillingStatusEnum.TRIAL_CANCELLED
-      ) {
-        if (
-          subscriptionBilling.frequency ===
-          SubscriptionBillingFrequencyEnum.MONTHLY
-        ) {
+      if (status !== SubscriptionBillingStatusEnum.TRIAL_CANCELLED) {
+        if (frequency === SubscriptionBillingFrequencyEnum.MONTHLY) {
+          for (
+            let billingMonth = month;
+            billingMonth <= next_cycle_month;
+            billingMonth++
+          ) {
+            if (monthlyRevenue[billingMonth]) {
+              monthlyRevenue[billingMonth] += billingValue;
+            } else {
+              monthlyRevenue[billingMonth] = billingValue;
+            }
+          }
         }
 
-        const revenue = value;
-
-        const key = `${billingYear}-${month + 1}`;
-
-        if (!monthlyRevenue[key]) {
-          monthlyRevenue[key] = 0;
+        if (frequency === SubscriptionBillingFrequencyEnum.YEARLY) {
+          if (monthlyRevenue[month]) {
+            monthlyRevenue[month] += billingValue;
+          } else {
+            monthlyRevenue[month] = billingValue;
+          }
         }
-
-        monthlyRevenue[key] += revenue;
       }
     });
 
-    const revenueByMonth = Array.from({ length: 12 }, (_, index) => {
-      const year = new Date().getFullYear();
-      const month = index + 1;
-      const key = `${year}-${month < 10 ? '0' + month : month}`;
-
+    const toDomaiMRR = Object.keys(monthlyRevenue).map((key) => {
       return {
-        month: month,
-        year: year,
-        revenue: monthlyRevenue[key] || 0,
+        month: years[Number(key) - 1],
+        revenue: Number(monthlyRevenue[Number(key)].toFixed(2)),
       };
     });
+
+    return { billingYear, currency: 'BRL', symbol: 'R$', mrr: toDomaiMRR };
   }
 }

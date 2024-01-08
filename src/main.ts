@@ -26,7 +26,9 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('CopyDash API')
-    .setDescription('Backend responsável por processamento de dados da CopyDash')
+    .setDescription(
+      'Backend responsável por processamento de dados da CopyDash',
+    )
     .setVersion('1.0')
     .build();
 
