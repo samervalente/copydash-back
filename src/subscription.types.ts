@@ -16,6 +16,7 @@ export enum SubscriptionBillingStatusEnum {
   CANCELLED = 'Cancelada',
   TRIAL_CANCELLED = 'Trial cancelado',
   UPGRADE = 'Upgrade',
+  LATE = 'Atrasada',
 }
 
 export enum SubscriptionBillingFrequencyEnum {

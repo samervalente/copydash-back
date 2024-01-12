@@ -12,16 +12,20 @@ export class FileService {
 
     try {
       fs.writeFileSync(filePath, file.buffer);
-
-      if (file.originalname.endsWith('.xlsx')) {
-        return this.readXLSX(filePath);
-      } else if (file.originalname.endsWith('.csv')) {
-        return this.readCSV(filePath);
-      } else {
-        throw new Error('Formato de arquivo não suportado');
-      }
+      return await this.processFileAsync(filePath);
     } catch (error) {
+      console.log(error);
       throw new Error('Erro ao processar o arquivo');
+    }
+  }
+
+  async processFileAsync(filePath: string): Promise<SubscriptionBilling[]> {
+    if (filePath.endsWith('.xlsx')) {
+      return await this.readXLSX(filePath);
+    } else if (filePath.endsWith('.csv')) {
+      return await this.readCSV(filePath);
+    } else {
+      throw new Error('Formato de arquivo não suportado');
     }
   }
 

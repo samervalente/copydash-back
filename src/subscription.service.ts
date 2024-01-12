@@ -5,10 +5,11 @@ import {
   SubscriptionBillingStatusEnum,
 } from './subscription.types';
 import { months } from './utils/constants';
+import { isWithinInterval } from 'date-fns';
 
 @Injectable()
 export class SubscriptionService {
-  calculateMRR(data: SubscriptionBilling[], billingYear = '2022') {
+  calculateMRR(data: SubscriptionBilling[]) {
     const monthlyRevenue = {};
     data.forEach((subscriptionBilling: SubscriptionBilling) => {
       const {
@@ -49,11 +50,76 @@ export class SubscriptionService {
 
     const toDomaiMRR = Object.keys(monthlyRevenue).map((key) => {
       return {
-        month: months[Number(key) - 1],
-        revenue: Number(monthlyRevenue[Number(key)].toFixed(2)),
+        month: months[Number(key)],
+        revenue: Number(monthlyRevenue[Number(key) + 1]).toFixed(2),
       };
     });
 
-    return { billingYear, currency: 'BRL', symbol: 'R$', mrr: toDomaiMRR };
+    return toDomaiMRR;
+  }
+
+  calculateChurnRate(
+    data: SubscriptionBilling[],
+    start_date: Date,
+    end_date: Date,
+  ) {
+    const activeMembersQuantityByMonth = {};
+    const cancelledMembersQuantityByMonth = {};
+
+    data.forEach((subscription) => {
+      const { status_date, cancellation_date } = subscription;
+
+      if (
+        (subscription.status === SubscriptionBillingStatusEnum.CANCELLED ||
+          subscription.status ===
+            SubscriptionBillingStatusEnum.TRIAL_CANCELLED) &&
+        isWithinInterval(cancellation_date, {
+          start: start_date,
+          end: end_date,
+        })
+      ) {
+        const cancellation_date_month = new Date(status_date).getMonth() + 1;
+        cancelledMembersQuantityByMonth[cancellation_date_month] =
+          (cancelledMembersQuantityByMonth[cancellation_date_month] || 0) + 1;
+      }
+
+      if (subscription.status === SubscriptionBillingStatusEnum.ACTIVE) {
+        const status_date_month = new Date(status_date).getMonth() + 1;
+        activeMembersQuantityByMonth[status_date_month] =
+          (activeMembersQuantityByMonth[status_date_month] || 0) + 1;
+      }
+    });
+
+    const toDomainChurnRate = Object.keys(activeMembersQuantityByMonth).map(
+      (key) => {
+        const rate =
+          (Number(cancelledMembersQuantityByMonth[key]) /
+            Number(activeMembersQuantityByMonth[key])) *
+          100;
+
+        return {
+          month: months[Number(key) - 1],
+          rate,
+          exceedPercentage: rate > 100 ? Math.round(rate - 100) : 0,
+        };
+      },
+    );
+    const totalActive = Object.values(activeMembersQuantityByMonth).reduce(
+      (acc: number, curr: number) => acc + curr,
+      0,
+    );
+
+    const totalCancelled = Object.values(
+      cancelledMembersQuantityByMonth,
+    ).reduce((acc: number, curr: number) => acc + curr, 0);
+
+    const totalSubscribers = data.length;
+
+    return {
+      rate: toDomainChurnRate,
+      totalActive,
+      totalCancelled,
+      totalSubscribers,
+    };
   }
 }
